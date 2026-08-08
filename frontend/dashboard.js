@@ -106,6 +106,24 @@ function updateLeftPanel(t) {
   setText("sys-gps", (t.gps_fix_type >= 3 ? "3D FIX" : t.gps_fix_type === 2 ? "2D FIX" : "NO FIX") + " (" + t.gps_satellites + ")");
   setClass("sys-gps", t.gps_fix_type >= 3 ? "ok" : "warn");
 
+  // ekf_ok / compass_ok are null when the vehicle hasn't reported that sensor
+  // as present (shown as N/A), or true/false once SYS_STATUS has arrived.
+  if (t.ekf_ok === null || t.ekf_ok === undefined) {
+    setText("sys-ekf", "N/A");
+    setClass("sys-ekf", "muted");
+  } else {
+    setText("sys-ekf", t.ekf_ok ? "OK" : "FAIL");
+    setClass("sys-ekf", t.ekf_ok ? "ok" : "danger");
+  }
+
+  if (t.compass_ok === null || t.compass_ok === undefined) {
+    setText("sys-compass", "N/A");
+    setClass("sys-compass", "muted");
+  } else {
+    setText("sys-compass", t.compass_ok ? "OK" : "FAIL");
+    setClass("sys-compass", t.compass_ok ? "ok" : "danger");
+  }
+
   setText("sys-heartbeat", t.connected ? "OK" : "LOST");
   setClass("sys-heartbeat", t.connected ? "ok" : "danger");
 
