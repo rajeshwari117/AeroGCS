@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AeroGCS</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="topbar-logo">
+      <i class="fa-solid fa-drone"></i>
+      <div>
+        <div class="name">AeroGCS</div>
+        <div class="subtitle">GROUND CONTROL STATION</div>
+      </div>
+    </div>
+    <div class="status-group">
+      <div class="status-item"><span class="label">Connection</span><span class="value" id="stat-connection"><span class="dot off" id="dot-connection"></span>--</span></div>
+      <div class="status-item"><span class="label">Vehicle</span><span class="value" id="stat-vehicle">ArduPilot SITL</span></div>
+      <div class="status-item"><span class="label">Mode</span><span class="value accent" id="stat-mode">--</span></div>
+      <div class="status-item"><span class="label">Armed</span><span class="value danger" id="stat-armed">--</span></div>
+      <div class="status-item"><span class="label">Battery</span><span class="value" id="stat-battery">--</span></div>
+      <div class="status-item"><span class="label">GPS</span><span class="value" id="stat-gps">--</span></div>
+      <div class="status-item"><span class="label">Link Quality</span><span class="value muted" id="stat-link">N/A</span></div>
+      <div class="status-item"><span class="label">Time (UTC)</span><span class="value" id="stat-time">--</span></div>
+    </div>
+    <div class="topbar-icons">
+      <i class="fa-solid fa-gear" title="Settings"></i>
+      <i class="fa-solid fa-power-off" title="Reconnect" id="btn-power"></i>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <div class="col" id="left-panel">
+      <div class="card">
+        <div class="card-header">Attitude Indicator</div>
+        <div class="card-body">
+          <div class="attitude-body">
+            <div class="horizon-wrap" id="horizon-container"></div>
+            <div class="alt-tape">
+              <div class="alt-unit">ALT(m)</div>
+              <div class="alt-value" id="tel-alt-tape">--</div>
+            </div>
+          </div>
+          <div class="attitude-readout">
+            <div class="readout-cell"><div class="val" id="tel-roll">--</div><div class="lbl">ROLL</div></div>
+            <div class="readout-cell"><div class="val" id="tel-pitch">--</div><div class="lbl">PITCH</div></div>
+            <div class="readout-cell"><div class="val" id="tel-yaw">--</div><div class="lbl">YAW</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-row">
+        <div class="card">
+          <div class="card-header">Compass</div>
+          <div class="card-body"><div class="compass-wrap" id="compass-container"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Vert. Speed</div>
+          <div class="card-body"><div class="vsi-wrap" id="vsi-container"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">System Status</div>
+        <div class="card-body">
+          <div class="status-row"><span class="label"><i class="fa-solid fa-satellite-dish"></i>GPS</span><span class="value" id="sys-gps">--</span></div>
+          <div class="status-row"><span class="label"><i class="fa-solid fa-microchip"></i>EKF</span><span class="value muted" id="sys-ekf">N/A</span></div>
+          <div class="status-row"><span class="label"><i class="fa-solid fa-compass"></i>Compass</span><span class="value muted" id="sys-compass">N/A</span></div>
+          <div class="status-row"><span class="label"><i class="fa-solid fa-signal"></i>RC Signal</span><span class="value muted" id="sys-rc">N/A</span></div>
+          <div class="status-row"><span class="label"><i class="fa-solid fa-heart-pulse"></i>Heartbeat</span><span class="value" id="sys-heartbeat">--</span></div>
+          <div class="status-row"><span class="label"><i class="fa-solid fa-triangle-exclamation"></i>Failsafe</span><span class="value" id="sys-failsafe">--</span></div>
+        </div>
+      </div>
+
+      <div class="card card-grow">
+        <div class="card-header">Telemetry</div>
+        <div class="card-body">
+          <div class="telemetry-grid">
+            <div class="tel-cell"><div class="label">Altitude</div><div class="value" id="tel-alt">--</div></div>
+            <div class="tel-cell"><div class="label">Ground Speed</div><div class="value" id="tel-gspeed">--</div></div>
+            <div class="tel-cell"><div class="label">Air Speed</div><div class="value" id="tel-aspeed">--</div></div>
+            <div class="tel-cell"><div class="label">Vertical Speed</div><div class="value" id="tel-vspeed">--</div></div>
+            <div class="tel-cell"><div class="label">Battery Voltage</div><div class="value" id="tel-voltage">--</div></div>
+            <div class="tel-cell"><div class="label">Battery %</div><div class="value" id="tel-battpct">--</div></div>
+            <div class="tel-cell"><div class="label">Current</div><div class="value" id="tel-current">--</div></div>
+            <div class="tel-cell"><div class="label">Heading</div><div class="value" id="tel-heading">--</div></div>
+            <div class="tel-cell"><div class="label">Distance</div><div class="value" id="tel-distance">--</div></div>
+            <div class="tel-cell"><div class="label">Flight Time</div><div class="value" id="tel-flighttime">--</div></div>
+            <div class="tel-cell"><div class="label">Home Distance</div><div class="value" id="tel-homedist">--</div></div>
+            <div class="tel-cell"><div class="label">Max Altitude</div><div class="value" id="tel-maxalt">--</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="center-col">
+      <div class="map-card"><div id="map"></div></div>
+      <div class="telemetry-strip">
+        <div class="strip-cell"><div class="label">Latitude</div><div class="value" id="strip-lat">--</div></div>
+        <div class="strip-cell"><div class="label">Longitude</div><div class="value" id="strip-lon">--</div></div>
+        <div class="strip-cell"><div class="label">Altitude</div><div class="value" id="strip-alt">--</div></div>
+        <div class="strip-cell"><div class="label">Heading</div><div class="value" id="strip-hdg">--</div></div>
+        <div class="strip-cell"><div class="label">Ground Speed</div><div class="value" id="strip-gspeed">--</div></div>
+        <div class="strip-cell"><div class="label">Air Speed</div><div class="value" id="strip-aspeed">--</div></div>
+      </div>
+
+      <div class="console">
+        <div class="console-tabs">
+          <div class="console-tabs-left">
+            <div class="console-tab active" data-tab="events">Events</div>
+            <div class="console-tab" data-tab="mavlink">MAVLink Log</div>
+            <div class="console-tab" data-tab="commands">Command Log</div>
+            <div class="console-tab" data-tab="warnings">Warnings</div>
+          </div>
+          <div class="console-actions">
+            <span>Auto scroll</span>
+            <div class="toggle on" id="autoscroll-toggle"><div class="toggle-knob"></div></div>
+            <button class="btn" id="btn-console-clear" style="padding:4px 10px;">Clear</button>
+          </div>
+        </div>
+        <div class="console-body" id="console-body"></div>
+      </div>
+    </div>
+
+    <div class="col" id="right-panel">
+      <div class="card">
+        <div class="card-header">Vehicle Controls</div>
+        <div class="card-body">
+          <div class="btn-grid">
+            <button class="btn btn-arm" id="btn-arm"><i class="fa-solid fa-lock-open"></i>ARM</button>
+            <button class="btn btn-disarm" id="btn-disarm"><i class="fa-solid fa-lock"></i>DISARM</button>
+            <button class="btn" id="btn-takeoff"><i class="fa-solid fa-up-long"></i>TAKEOFF</button>
+            <button class="btn" id="btn-land"><i class="fa-solid fa-down-long"></i>LAND</button>
+            <button class="btn" id="btn-rtl"><i class="fa-solid fa-house"></i>RTL</button>
+            <button class="btn" id="btn-loiter"><i class="fa-regular fa-circle"></i>LOITER</button>
+            <button class="btn" id="btn-guided"><i class="fa-solid fa-location-arrow"></i>GUIDED</button>
+            <button class="btn" id="btn-auto"><i class="fa-solid fa-a"></i>AUTO</button>
+          </div>
+          <div style="margin-top:8px;">
+            <select id="mode-select">
+              <option value="STABILIZE">STABILIZE</option>
+              <option value="GUIDED">GUIDED</option>
+              <option value="AUTO">AUTO</option>
+              <option value="LOITER">LOITER</option>
+              <option value="RTL">RTL</option>
+              <option value="LAND">LAND</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-grow">
+        <div class="card-header">Mission<span class="wp-count" id="wp-count">0 WP</span></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table id="mission-table">
+              <colgroup>
+                <col style="width:7%">
+                <col style="width:29%">
+                <col style="width:29%">
+                <col style="width:13%">
+                <col style="width:22%">
+              </colgroup>
+              <thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>Alt (m)</th><th>Type</th></tr></thead>
+              <tbody id="mission-tbody"><tr class="empty-row"><td colspan="5">No waypoints loaded</td></tr></tbody>
+            </table>
+          </div>
+          <div class="btn-grid" style="margin-top:8px;">
+            <button class="btn btn-arm" id="btn-wp-add">ADD WP</button>
+            <button class="btn btn-disarm" id="btn-wp-remove">REMOVE</button>
+            <button class="btn btn-blue" id="btn-mission-upload">UPLOAD</button>
+            <button class="btn btn-amber" id="btn-mission-clear">CLEAR</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-grow">
+        <div class="card-header">Parameters</div>
+        <div class="card-body">
+          <div class="search-input">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="param-search" placeholder="Search parameters...">
+          </div>
+          <div class="table-scroll" style="margin-top:8px;">
+            <table id="param-table">
+              <colgroup>
+                <col style="width:48%">
+                <col style="width:34%">
+                <col style="width:18%">
+              </colgroup>
+              <thead><tr><th>Parameter</th><th>Value</th><th>Type</th></tr></thead>
+              <tbody id="param-tbody"><tr class="empty-row"><td colspan="3">No parameters loaded — click Refresh</td></tr></tbody>
+            </table>
+          </div>
+          <div class="btn-grid" style="margin-top:8px;">
+            <button class="btn" id="btn-param-refresh">REFRESH</button>
+            <button class="btn btn-blue" id="btn-param-load">LOAD FILE</button>
+            <button class="btn btn-arm" id="btn-param-save">SAVE FILE</button>
+            <button class="btn btn-amber" id="btn-param-write">WRITE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-bar">
+    <span>STATUS: <span class="ok" id="footer-status">Connecting...</span></span>
+    <span>TELEMETRY RATE: <span id="footer-rate">--</span></span>
+    <span>BACKEND: <span class="ok" id="footer-backend">--</span></span>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="pfd.js"></script>
+<script src="map.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>
