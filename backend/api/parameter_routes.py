@@ -6,6 +6,20 @@ from backend.utils.validators import validate_parameter
 parameter_bp = Blueprint("parameter", __name__)
 
 
+@parameter_bp.route("/api/params", methods=["GET"])
+def list_parameters():
+    """
+    Returns the current parameter cache (populated as PARAM_VALUE messages
+    arrive after a /api/params/refresh call). This is a read of vehicle_state's
+    in-memory cache, not a fresh request to the vehicle -- call refresh first
+    if the cache is empty or stale.
+    """
+    from backend.mavlink.vehicle import vehicle_state
+    with vehicle_state.lock:
+        params = dict(vehicle_state.parameters)
+    return jsonify({"success": True, "parameters": params, "count": len(params)})
+
+
 @parameter_bp.route("/api/params/refresh", methods=["POST"])
 def refresh_parameters():
     """Triggers a full parameter dump from the vehicle (fills vehicle_state.parameters over time)."""

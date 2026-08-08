@@ -1,9 +1,11 @@
 import math
 import time
 
-from backend.mavlink.vehicle import vehicle_state
+from pymavlink import mavutil
 
-# Fallback Copter mode map, used only if pymavlink's own flightmode lookup fails.
+from backend.mavlink.vehicle import vehicle_state
+from backend.utils.logger import logger
+
 COPTER_MODE_MAP = {
     0: "STABILIZE", 1: "ACRO", 2: "ALT_HOLD", 3: "AUTO", 4: "GUIDED",
     5: "LOITER", 6: "RTL", 7: "CIRCLE", 9: "LAND", 11: "DRIFT",
@@ -13,19 +15,25 @@ COPTER_MODE_MAP = {
 }
 
 
+def _sensor_health(present_bitmask, health_bitmask, bit):
+    """
+    Returns True/False if this sensor bit is PRESENT on the vehicle, or None
+    if the vehicle doesn't report having this sensor at all -- shown as N/A,
+    not as a false "unhealthy".
+    """
+    if not (present_bitmask & bit):
+        return None
+    return bool(health_bitmask & bit)
+
+
 def parse_mavlink_message(msg, mav_conn=None):
     """
     Reads one MAVLink message and updates the shared vehicle_state.
     Called once per message by the connection manager's listener loop.
-
-    :param msg: a decoded pymavlink message object
-    :param mav_conn: the live connection (optional) — used for the
-                      flightmode helper, which knows the vehicle type
     """
     msg_type = msg.get_type()
 
     if msg_type == "HEARTBEAT":
-        # bit 128 in base_mode = MAV_MODE_FLAG_SAFETY_ARMED
         is_armed = bool(msg.base_mode & 128)
 
         flight_mode = "UNKNOWN"
@@ -45,12 +53,25 @@ def parse_mavlink_message(msg, mav_conn=None):
         )
 
     elif msg_type == "SYS_STATUS":
-        voltage = msg.voltage_battery / 1000.0  # mV -> V
-        current = msg.current_battery / 100.0 if msg.current_battery != -1 else -1.0  # cA -> A
+        voltage = msg.voltage_battery / 1000.0
+        current = msg.current_battery / 100.0 if msg.current_battery != -1 else -1.0
         vehicle_state.update(
             battery_voltage=round(voltage, 2),
             battery_current=round(current, 2),
             battery_percentage=msg.battery_remaining,
+        )
+
+        present = msg.onboard_control_sensors_present
+        health = msg.onboard_control_sensors_health
+
+        ekf_ok = _sensor_health(present, health, mavutil.mavlink.MAV_SYS_STATUS_AHRS)
+        compass_ok = _sensor_health(present, health, mavutil.mavlink.MAV_SYS_STATUS_SENSOR_3D_MAG)
+        gps_sensor_ok = _sensor_health(present, health, mavutil.mavlink.MAV_SYS_STATUS_SENSOR_GPS)
+
+        vehicle_state.update(
+            ekf_ok=ekf_ok,
+            compass_ok=compass_ok,
+            gps_sensor_ok=gps_sensor_ok,
         )
 
     elif msg_type == "GPS_RAW_INT":
@@ -60,11 +81,11 @@ def parse_mavlink_message(msg, mav_conn=None):
         )
 
     elif msg_type == "GLOBAL_POSITION_INT":
-        heading = msg.hdg / 100.0 if msg.hdg != 65535 else 0.0  # 65535 = "unknown" sentinel
+        heading = msg.hdg / 100.0 if msg.hdg != 65535 else 0.0
         vehicle_state.update(
             latitude=msg.lat / 1e7,
             longitude=msg.lon / 1e7,
-            relative_alt=round(msg.relative_alt / 1000.0, 2),  # mm -> m
+            relative_alt=round(msg.relative_alt / 1000.0, 2),
             absolute_alt=round(msg.alt / 1000.0, 2),
             heading=round(heading, 1),
         )
@@ -91,3 +112,16 @@ def parse_mavlink_message(msg, mav_conn=None):
         param_id = param_id.strip()
         with vehicle_state.lock:
             vehicle_state.parameters[param_id] = msg.param_value
+
+    elif msg_type == "STATUSTEXT":
+        text = msg.text
+        if isinstance(text, bytes):
+            text = text.decode("utf-8", errors="ignore")
+        text = text.rstrip("\x00").strip()
+
+        vehicle_state.update(
+            last_statustext=text,
+            last_statustext_severity=msg.severity,
+            last_statustext_time=time.time(),
+        )
+        logger.log_event("statustext", {"text": text, "severity": msg.severity})

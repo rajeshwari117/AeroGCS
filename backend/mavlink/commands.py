@@ -15,13 +15,15 @@ STATE_POLL_INTERVAL_SEC = 0.2
 def _wait_for_command_ack(command_id, timeout=ACK_TIMEOUT_SEC):
     """
     Waits for a COMMAND_ACK matching command_id. Returns (success, message).
-    This confirms the flight controller RECEIVED and ACCEPTED the command —
-    it does not confirm the resulting state change has happened yet.
+    On rejection or timeout, appends the most recent STATUSTEXT (if any
+    arrived after we sent this command) -- COMMAND_ACK alone only gives a
+    numeric result code, not the human-readable pre-arm/rejection reason.
     """
+    sent_time = time.time()
     q = queue.Queue(maxsize=20)
     register_listener("COMMAND_ACK", q)
     try:
-        deadline = time.time() + timeout
+        deadline = sent_time + timeout
         while time.time() < deadline:
             try:
                 msg = q.get(timeout=max(0.01, deadline - time.time()))
@@ -32,10 +34,17 @@ def _wait_for_command_ack(command_id, timeout=ACK_TIMEOUT_SEC):
                     return True, "Command accepted by vehicle."
                 result_enum = mavutil.mavlink.enums["MAV_RESULT"].get(msg.result)
                 reason = result_enum.name if result_enum else f"result_code_{msg.result}"
-                return False, f"Vehicle rejected command: {reason}"
-        return False, "Timed out waiting for command acknowledgement."
+                return False, _with_statustext(f"Vehicle rejected command: {reason}", sent_time)
+        return False, _with_statustext("Timed out waiting for command acknowledgement.", sent_time)
     finally:
         unregister_listener("COMMAND_ACK", q)
+
+
+def _with_statustext(base_reason, sent_time):
+    """Appends the latest STATUSTEXT to an error message, if one arrived after sent_time."""
+    if vehicle_state.last_statustext and vehicle_state.last_statustext_time >= sent_time:
+        return f"{base_reason} — {vehicle_state.last_statustext}"
+    return base_reason
 
 
 def _wait_for_state(check_fn, timeout=STATE_CONFIRM_TIMEOUT_SEC, poll_interval=STATE_POLL_INTERVAL_SEC):

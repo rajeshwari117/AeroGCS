@@ -26,30 +26,43 @@ class VehicleState:
         self.flight_mode = "UNKNOWN"
 
         # Position (from GLOBAL_POSITION_INT)
-        self.latitude = 0.0        # degrees
-        self.longitude = 0.0       # degrees
-        self.relative_alt = 0.0    # meters, above home/takeoff point
-        self.absolute_alt = 0.0    # meters, above sea level (MSL)
-        self.heading = 0.0         # degrees, 0-360
+        self.latitude = 0.0
+        self.longitude = 0.0
+        self.relative_alt = 0.0
+        self.absolute_alt = 0.0
+        self.heading = 0.0
 
         # Speed / climb (from VFR_HUD)
-        self.groundspeed = 0.0     # m/s
-        self.airspeed = 0.0        # m/s
-        self.climb_rate = 0.0      # m/s, positive = climbing
+        self.groundspeed = 0.0
+        self.airspeed = 0.0
+        self.climb_rate = 0.0
 
         # Battery (from SYS_STATUS)
-        self.battery_voltage = 0.0     # volts
-        self.battery_current = -1.0    # amps, -1 if sensor unsupported
-        self.battery_percentage = -1   # percent, -1 if invalid
+        self.battery_voltage = 0.0
+        self.battery_current = -1.0
+        self.battery_percentage = -1
 
         # GPS (from GPS_RAW_INT)
         self.gps_satellites = 0
-        self.gps_fix_type = 0      # 0-1 = no fix, 2 = 2D, 3 = 3D, 4+ = augmented
+        self.gps_fix_type = 0
 
-        # Attitude (from ATTITUDE) — needed for the PFD/artificial horizon later
-        self.roll = 0.0    # degrees
-        self.pitch = 0.0   # degrees
-        self.yaw = 0.0      # degrees
+        # Attitude (from ATTITUDE)
+        self.roll = 0.0
+        self.pitch = 0.0
+        self.yaw = 0.0
+
+        # Sensor health (from SYS_STATUS onboard_control_sensors_present/health bitmasks).
+        # None = sensor not present on this vehicle / not yet reported.
+        # True/False = actual reported health once a SYS_STATUS message has arrived.
+        self.ekf_ok = None
+        self.compass_ok = None
+        self.gps_sensor_ok = None
+
+        # Last STATUSTEXT received (used to surface real pre-arm/rejection reasons
+        # alongside COMMAND_ACK results, which are often just a numeric code).
+        self.last_statustext = ""
+        self.last_statustext_severity = 0
+        self.last_statustext_time = 0.0
 
         # Failsafe status (set by failsafe.py)
         self.failsafe_triggered = False
@@ -63,9 +76,7 @@ class VehicleState:
         Thread-safe batch update. Call as:
             vehicle_state.update(armed=True, flight_mode="GUIDED")
         Only updates attributes that already exist on the object — this
-        catches typos early (a bad kwarg is silently ignored rather than
-        creating a new stray attribute, which would be a much harder bug
-        to spot later).
+        catches typos early.
         """
         with self.lock:
             for key, value in kwargs.items():
@@ -100,12 +111,17 @@ class VehicleState:
                 "roll": self.roll,
                 "pitch": self.pitch,
                 "yaw": self.yaw,
+                "ekf_ok": self.ekf_ok,
+                "compass_ok": self.compass_ok,
+                "gps_sensor_ok": self.gps_sensor_ok,
+                "last_statustext": self.last_statustext,
+                "last_statustext_severity": self.last_statustext_severity,
+                "last_statustext_time": self.last_statustext_time,
                 "failsafe_triggered": self.failsafe_triggered,
                 "failsafe_reason": self.failsafe_reason,
                 "timestamp": time.time(),
             }
 
 
-# Single shared instance — every other module imports THIS object,
-# never creates its own VehicleState(). That's what makes it a singleton.
+# Single shared instance — every other module imports THIS object.
 vehicle_state = VehicleState()

@@ -393,14 +393,25 @@ function wireParameters() {
 
   document.getElementById("btn-param-refresh").onclick = async () => {
     logLine("events", "INFO", "Requesting full parameter list from vehicle...");
-    await apiPost("/api/params/refresh", {});
+    try {
+      await apiPost("/api/params/refresh", {});
+    } catch (e) {
+      logLine("events", "ERROR", "Refresh request failed: " + e.message);
+      return;
+    }
     setTimeout(async () => {
-      const res = await apiGet("/api/params");
-      if (res.success) {
-        state.cachedParams = res.parameters;
-        state.editedParams = {};
-        renderParamTable(document.getElementById("param-search").value);
-        logLine("events", "INFO", `Loaded ${res.count} parameters.`);
+      try {
+        const res = await apiGet("/api/params");
+        if (res.success) {
+          state.cachedParams = res.parameters;
+          state.editedParams = {};
+          renderParamTable(document.getElementById("param-search").value);
+          logLine("events", "INFO", `Loaded ${res.count} parameters.`);
+        } else {
+          logLine("events", "ERROR", "Backend returned failure fetching /api/params.");
+        }
+      } catch (e) {
+        logLine("events", "ERROR", "Failed to fetch /api/params: " + e.message);
       }
     }, 2000);
   };
