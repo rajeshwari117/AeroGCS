@@ -124,6 +124,15 @@ function updateLeftPanel(t) {
     setClass("sys-compass", t.compass_ok ? "ok" : "danger");
   }
 
+  if (t.rc_rssi === null || t.rc_rssi === undefined) {
+    setText("sys-rc", "N/A");
+    setClass("sys-rc", "muted");
+  } else {
+    const pct = Math.round((t.rc_rssi / 254) * 100);
+    setText("sys-rc", `OK (${pct}%)`);
+    setClass("sys-rc", pct < 30 ? "warn" : "ok");
+  }
+
   setText("sys-heartbeat", t.connected ? "OK" : "LOST");
   setClass("sys-heartbeat", t.connected ? "ok" : "danger");
 

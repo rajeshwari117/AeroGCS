@@ -113,6 +113,20 @@ def parse_mavlink_message(msg, mav_conn=None):
         with vehicle_state.lock:
             vehicle_state.parameters[param_id] = msg.param_value
 
+    elif msg_type == "RC_CHANNELS":
+        # rssi == 255 means the flight controller reports RSSI as unavailable
+        # (common in SITL with no simulated RC link) -- surfaced as None (N/A),
+        # not as a fake/zero signal value.
+        rssi = msg.rssi if msg.rssi != 255 else None
+        vehicle_state.update(rc_rssi=rssi)
+
+    elif msg_type == "MISSION_CURRENT":
+        vehicle_state.update(current_wp_seq=msg.seq)
+
+    elif msg_type == "MISSION_ITEM_REACHED":
+        vehicle_state.update(last_wp_reached=msg.seq)
+        logger.log_event("waypoint_reached", {"seq": msg.seq})
+
     elif msg_type == "STATUSTEXT":
         text = msg.text
         if isinstance(text, bytes):

@@ -58,11 +58,23 @@ class VehicleState:
         self.compass_ok = None
         self.gps_sensor_ok = None
 
+        # RC signal (from RC_CHANNELS). None = no RC_CHANNELS message ever
+        # received (genuinely unknown -- e.g. SITL with no simulated RC input
+        # configured). rssi is 0-255 once a message arrives; 255 means the
+        # flight controller itself reports "RSSI not available".
+        self.rc_rssi = None
+
         # Last STATUSTEXT received (used to surface real pre-arm/rejection reasons
         # alongside COMMAND_ACK results, which are often just a numeric code).
         self.last_statustext = ""
         self.last_statustext_severity = 0
         self.last_statustext_time = 0.0
+
+        # Mission progress (from MISSION_CURRENT / MISSION_ITEM_REACHED).
+        # -1 means "no mission sequence reported yet" -- distinct from 0,
+        # which is a real waypoint index.
+        self.current_wp_seq = -1
+        self.last_wp_reached = -1
 
         # Failsafe status (set by failsafe.py)
         self.failsafe_triggered = False
@@ -114,6 +126,9 @@ class VehicleState:
                 "ekf_ok": self.ekf_ok,
                 "compass_ok": self.compass_ok,
                 "gps_sensor_ok": self.gps_sensor_ok,
+                "current_wp_seq": self.current_wp_seq,
+                "last_wp_reached": self.last_wp_reached,
+                "rc_rssi": self.rc_rssi,
                 "last_statustext": self.last_statustext,
                 "last_statustext_severity": self.last_statustext_severity,
                 "last_statustext_time": self.last_statustext_time,
